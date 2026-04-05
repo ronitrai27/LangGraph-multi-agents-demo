@@ -240,7 +240,7 @@ Today's date is {today}.
  
 memory   = MemorySaver()
 agent    = create_agent(
-    "gpt-4.1-nano",           # swap to gpt-4.1-nano for cheaper
+    "gpt-4.1-nano",         
     tools=TOOLS,
     checkpointer=memory,
     system_prompt=SYSTEM_PROMPT,
