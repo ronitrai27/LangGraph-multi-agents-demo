@@ -108,9 +108,33 @@ model_with_tools = model.bind_tools(tools)
 # --------------------------
 # ── 5. Parallel tool calls ────────────────────────────────────
 # Model calls multiple tools in one go when needed
-response = model_with_tools.invoke(
-    "Compare the status of proj-001 and proj-002"
-)
-print("\nParallel tool calls:")
-for tc in response.tool_calls:
-    print(f"  → {tc['name']}({tc['args']})")
+# response = model_with_tools.invoke(
+#     "Compare the status of proj-001 and proj-002"
+# )
+# print("\nParallel tool calls:")
+# for tc in response.tool_calls:
+#     print(f"  → {tc['name']}({tc['args']})")
+    
+
+# -------------------------------------
+# ── 7. Tools with Pydantic schemas (more control) ────────────
+class SearchTicketsInput(BaseModel):
+    """Input for searching tickets."""
+    query: str = Field(description="Search query text")
+    status: str = Field(default="open", description="Filter: open | closed | all")
+    limit: int = Field(default=10, description="Max results to return")
+
+@tool(args_schema=SearchTicketsInput)
+def search_tickets(query: str, status: str = "open", limit: int = 10) -> list[dict]:
+    """Search for tickets matching a query string."""
+    # In production: full-text search your DB
+    return [
+        {"id": "TICK-1001", "title": f"[mock] Result for '{query}'", "status": status}
+    ]
+
+print("\nPydantic schema tool:", search_tickets.name)
+
+# KEY INSIGHT: This is the boundary between LangChain and your app.
+# Tools = the interface between the LLM brain and your real systems
+# (DB, APIs, files, external services). Keep tools small, focused,
+# and well-documented — the LLM reads those docstrings.
