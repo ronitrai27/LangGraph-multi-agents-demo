@@ -41,6 +41,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 load_dotenv()
 
+# FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY", "fc-ef5460ec3a984020b5e6964984a95ef2")
 FIRECRAWL_KEY = os.getenv("FIRECRAWL_API_KEY")
 
 # ────────────────────────────────────────────────────────────
@@ -84,47 +85,52 @@ def firecrawl_search(query: str, limit: int = 5) -> str:
         timeout=30,
     )
     data = resp.json()
+    print(f"\n  [DEBUG] Firecrawl top-level keys: {list(data.keys())}")
+    print(f"  [DEBUG] data['data'] type: {type(data.get('data'))}")
 
     if not data.get("success"):
         return json.dumps({"error": "Firecrawl search failed", "details": data})
 
-    results = []
-    for r in data.get("data", [])[:limit]:
+    raw = data.get("data", {})
+    items = raw.get("web", []) if isinstance(raw, dict) else raw
+
+    results = [] 
+    for r in items[:limit]:
         results.append({
             "title":   r.get("title", ""),
             "url":     r.get("url", ""),
             "content": r.get("markdown", r.get("description", ""))[:500],
         })
-    return json.dumps(results, indent=2)
 
+    return json.dumps(results, indent=2)  # 👈 also make sure this is here
+# NOT NEEDED WHILE TESTING OR DEVELOPENT
+# @tool
+# def firecrawl_scrape(url: str) -> str:
+#     """
+#     Scrape a specific URL and return its full content as markdown.
+#     Use when you have a specific page URL and need the full content.
+#     """
+#     payload = {
+#         "url": url,
+#         "formats": ["markdown"],
+#         "onlyMainContent": True,
+#     }
+#     headers = {
+#         "Authorization": f"Bearer {FIRECRAWL_KEY}",
+#         "Content-Type": "application/json",
+#     }
+#     resp = requests.post(
+#         "https://api.firecrawl.dev/v1/scrape",
+#         json=payload,
+#         headers=headers,
+#         timeout=30,
+#     )
+#     data = resp.json()
+#     if not data.get("success"):
+#         return json.dumps({"error": "Scrape failed", "details": data})
 
-@tool
-def firecrawl_scrape(url: str) -> str:
-    """
-    Scrape a specific URL and return its full content as markdown.
-    Use when you have a specific page URL and need the full content.
-    """
-    payload = {
-        "url": url,
-        "formats": ["markdown"],
-        "onlyMainContent": True,
-    }
-    headers = {
-        "Authorization": f"Bearer {FIRECRAWL_KEY}",
-        "Content-Type": "application/json",
-    }
-    resp = requests.post(
-        "https://api.firecrawl.dev/v1/scrape",
-        json=payload,
-        headers=headers,
-        timeout=30,
-    )
-    data = resp.json()
-    if not data.get("success"):
-        return json.dumps({"error": "Scrape failed", "details": data})
-
-    content = data.get("data", {}).get("markdown", "")
-    return content[:2000]   # cap at 2000 chars to avoid token explosion
+#     content = data.get("data", {}).get("markdown", "")
+#     return content[:2000]   
 
 # ────────────────────────────────────────────────────────────
 # 🔧 DB TOOLS — Mock database (for db_agent / GPT)
@@ -182,7 +188,7 @@ def list_all_products() -> str:
 # Web Agent — Claude claude-sonnet-4-6 (better at reading/summarising web content)
 web_agent = create_agent(
     "anthropic:claude-sonnet-4-6",
-    tools=[firecrawl_search, firecrawl_scrape],
+    tools=[firecrawl_search],
     system_prompt="""You are a web research specialist.
 Search the web to find accurate, current information.
 Always search first, then summarise clearly.
