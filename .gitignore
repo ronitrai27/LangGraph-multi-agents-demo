@@ -153,3 +153,51 @@ cython_debug/
 
 # VS Code
 .vscode/
+# =========================
+# Node.js / TypeScript
+# =========================
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables (already exists above, but safe)
+.env*
+!.env.example
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Parcel / Vite / Next build files
+.cache/
+.next/
+out/
+.vercel/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Lock files (optional - choose based on team)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Temporary files
+tmp/
+temp/
+
+# ESLint cache
+.eslintcache
