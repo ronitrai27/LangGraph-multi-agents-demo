@@ -6,7 +6,8 @@
     "chains": "tsx src/01_chains.ts",
     "structured": "tsx src/02_structured.ts",
     "pm-agent_01": "tsx src/pm-agent_01.ts",
-    "pm-agent_02": "tsx src/pm-agent_02.ts"
+    "pm-agent_02": "tsx src/pm-agent_02.ts",
+    "pm-agent_03": "tsx src/multi-agent_01.ts"
   },
   "keywords": [],
   "author": "",
