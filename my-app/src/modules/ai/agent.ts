@@ -43,7 +43,7 @@ import {
   insightsTools,
   executeAddTaskToSprint,
   addTaskToSprintSchema,
-} from "../_components/tools.js";
+} from "./tools";
 
 // ─────────────────────────────────────────────────────────────
 //  MODEL
@@ -275,7 +275,7 @@ export const roxo = createReactAgent({
   // LangGraph allows injecting the thread_id into the system prompt
   // via the stateModifier. Here we keep it simple with a static prompt.
   // For dynamic prompts (e.g. inject user role), use stateModifier.
-  prompt: `You are ROXO, the AI PM agent for WEkraft.
+  prompt: `You are ROXO, the AI PM agent for Wekraft.
 
 TOOLS AVAILABLE:
 - ask_project_basics  → read-only subagent (tasks, sprints, blocked items)
