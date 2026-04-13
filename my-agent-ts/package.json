@@ -9,7 +9,8 @@
     "pm-agent_02": "tsx src/pm-agent_02.ts",
     "pm-agent_03": "tsx src/multi-agent_01.ts",
     "simple-agent_01": "tsx src/simple-multi-agent_01.ts",
-    "new-agent_02": "tsx src/new-multi-agent_02.ts"
+    "new-agent_02": "tsx src/new-multi-agent_02.ts",
+    "deep-agents_01": "tsx src/deep-agents_01.ts"
   },
   "keywords": [],
   "author": "",
@@ -17,15 +18,17 @@
   "dependencies": {
     "@langchain/anthropic": "^1.3.26",
     "@langchain/core": "^1.1.39",
-    "@langchain/langgraph": "^1.2.7",
-    "@langchain/openai": "^1.4.2",
+    "@langchain/langgraph": "^1.2.8",
+    "@langchain/openai": "^1.4.4",
     "@types/node": "^25.5.2",
+    "deepagents": "^1.9.0",
     "dotenv": "^17.4.1",
-    "langchain": "^1.3.0",
+    "langchain": "^1.3.1",
     "mem0ai": "^2.4.6",
     "openai": "^6.33.0",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",

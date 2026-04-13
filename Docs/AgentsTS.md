@@ -157,3 +157,11 @@ export function AgentChat() {
 1. **`useStream` parses `streamEvents` natively:** It looks for `on_chat_model_stream` to build the paragraph text, and `on_tool_start` to populate the `runMap` so you can show loading spinners for specific subagents.
 2. **Interrupts:** When ROXO triggers `humanInTheLoopMiddleware`, `stream.interrupts` is populated. You show a UI dialog, the user clicks "Approve", and `stream.submitInterrupt()` sends the decision back to resume the graph.
 
+
+<!-- ------LANGCHAIN/REACT FOR USE FOR STREAMING -->
+## @langchain/react
+React SDK for building AI-powered applications with Deep Agents, LangChain and LangGraph. It provides a useStream hook that manages streaming, state, branching, and interrupts out of the box.
+
+Installation
+npm install @langchain/react @langchain/core
+Peer dependencies: react (^18 || ^19), @langchain/core (^1.1.27)
