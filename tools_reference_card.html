@@ -1,0 +1,187 @@
+<style>
+.section-label{font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--color-text-tertiary);text-transform:uppercase;margin:0 0 8px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 16px;margin-bottom:10px}
+.tool-name{font-size:15px;font-weight:500;color:var(--color-text-primary);margin:0 0 2px}
+.tool-who{font-size:12px;color:var(--color-text-tertiary);margin:0 0 10px}
+.badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;margin-bottom:10px}
+.badge-hitl{background:#FAEEDA;color:#633806}
+.io-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.io-box{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.io-title{font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin:0 0 6px;text-transform:uppercase;letter-spacing:.05em}
+.io-field{font-size:12px;color:var(--color-text-secondary);margin:3px 0;display:flex;gap:6px}
+.field-name{color:var(--color-text-primary);font-weight:500;min-width:90px}
+.field-type{color:var(--color-text-tertiary)}
+.agent-header{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.agent-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-purple{background:#7F77DD}
+.dot-teal{background:#1D9E75}
+.dot-coral{background:#D85A30}
+.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:16px 0}
+</style>
+
+<div style="padding:8px 0 20px">
+
+<p class="section-label">Total: 7 tools across 3 agents</p>
+
+<hr class="divider" style="margin-top:4px">
+
+<div class="agent-header">
+  <div class="agent-dot dot-purple"></div>
+  <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Supervisor (main agent) — 3 routing tools</span>
+</div>
+<p style="font-size:13px;color:var(--color-text-secondary);margin:-4px 0 12px">These are NOT real tools. The supervisor uses them to signal which subagent to call. They get intercepted and never actually run.</p>
+
+<div class="card">
+  <p class="tool-name">ask_order_agent</p>
+  <p class="tool-who">Supervisor only — delegates to order subagent</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">query</span><span class="field-type">string</span></div>
+      <div class="io-field" style="margin-top:4px;font-size:11px;color:var(--color-text-tertiary)">e.g. "what is status of ORD-001"</div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output</p>
+      <div class="io-field"><span style="color:var(--color-text-tertiary);font-size:12px">Intercepted — never returns. Routes to order_agent node.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="tool-name">ask_refund_agent</p>
+  <p class="tool-who">Supervisor only — delegates to refund subagent</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">query</span><span class="field-type">string</span></div>
+      <div class="io-field" style="margin-top:4px;font-size:11px;color:var(--color-text-tertiary)">e.g. "process refund for ORD-002"</div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output</p>
+      <div class="io-field"><span style="color:var(--color-text-tertiary);font-size:12px">Intercepted — never returns. Routes to refund_agent node.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#EF9F27">
+  <span class="badge badge-hitl">⚠ HITL — Needs Human Approval</span>
+  <p class="tool-name">update_order_status</p>
+  <p class="tool-who">Supervisor only — triggers human approval flow</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">new_status</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">reason</span><span class="field-type">string</span></div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Interrupt payload (sent to frontend)</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">product</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">current_status</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">new_status</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">reason</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">amount</span><span class="field-type">number</span></div>
+    </div>
+  </div>
+  <div style="margin-top:10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px">
+    <p class="io-title" style="margin-bottom:4px">After human responds</p>
+    <div class="io-field"><span class="field-name">"approve"</span><span style="color:var(--color-text-secondary);font-size:12px">→ DB updated, success message</span></div>
+    <div class="io-field"><span class="field-name">anything else</span><span style="color:var(--color-text-secondary);font-size:12px">→ cancelled message</span></div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<div class="agent-header">
+  <div class="agent-dot dot-teal"></div>
+  <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Order subagent — 2 real tools</span>
+</div>
+
+<div class="card">
+  <p class="tool-name">get_order</p>
+  <p class="tool-who">Order subagent — fetch one order by ID</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+      <div class="io-field" style="margin-top:4px;font-size:11px;color:var(--color-text-tertiary)">e.g. "ORD-001"</div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output (dict)</p>
+      <div class="io-field"><span class="field-name">product</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">status</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">amount</span><span class="field-type">number</span></div>
+      <div class="io-field"><span class="field-name">customer_name</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">customer_tier</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">customer_email</span><span class="field-type">string</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="tool-name">list_customer_orders</p>
+  <p class="tool-who">Order subagent — find all orders by customer name</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">customer_name</span><span class="field-type">string</span></div>
+      <div class="io-field" style="margin-top:4px;font-size:11px;color:var(--color-text-tertiary)">fuzzy match — "john" finds "John Smith"</div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output (list of dicts)</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">product</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">status</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">amount</span><span class="field-type">number</span></div>
+      <div class="io-field"><span class="field-name">customer_name</span><span class="field-type">string</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<div class="agent-header">
+  <div class="agent-dot dot-coral"></div>
+  <span style="font-size:14px;font-weight:500;color:var(--color-text-primary)">Refund subagent — 2 real tools</span>
+</div>
+<p style="font-size:13px;color:var(--color-text-secondary);margin:-4px 0 12px">Always calls check first, then process. Never skips eligibility check.</p>
+
+<div class="card">
+  <p class="tool-name">check_refund_eligibility</p>
+  <p class="tool-who">Refund subagent — always called first</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output (dict)</p>
+      <div class="io-field"><span class="field-name">eligible</span><span class="field-type">bool</span></div>
+      <div class="io-field"><span class="field-name">reason</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">amount</span><span class="field-type">number?</span></div>
+      <div class="io-field"><span class="field-name">product</span><span class="field-type">string?</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="tool-name">process_refund</p>
+  <p class="tool-who">Refund subagent — called only if eligible</p>
+  <div class="io-row">
+    <div class="io-box">
+      <p class="io-title">Input</p>
+      <div class="io-field"><span class="field-name">order_id</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">reason</span><span class="field-type">string</span></div>
+    </div>
+    <div class="io-box">
+      <p class="io-title">Output (dict)</p>
+      <div class="io-field"><span class="field-name">success</span><span class="field-type">bool</span></div>
+      <div class="io-field"><span class="field-name">refund_id</span><span class="field-type">string</span></div>
+      <div class="io-field"><span class="field-name">amount</span><span class="field-type">number</span></div>
+      <div class="io-field"><span class="field-name">message</span><span class="field-type">string</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
