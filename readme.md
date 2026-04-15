@@ -72,6 +72,11 @@
 ```
  
 ---
+## 🤝 Contributing
+
+Feel free to fork, improve, and submit PRs!
+If you like this project, give it a ⭐ on GitHub.
+---
  
 > **"Everyone wraps the SDK. We write the graph."**
 
@@ -508,3 +513,11 @@ Research query ─────────────────────�
 The research system will search your private documents alongside the public web.
  
 ---
+## 🤝 Contributing
+
+Feel free to fork, improve, and submit PRs!
+If you like this project, give it a ⭐ on GitHub.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
