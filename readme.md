@@ -37,7 +37,21 @@
 [![SerpAPI](https://img.shields.io/badge/SerpAPI-Scholar_%7C_Patents_%7C_News-4285F4?style=for-the-badge)](https://serpapi.com)
 [![Firecrawl](https://img.shields.io/badge/Firecrawl-Web_Scraping-FF6B35?style=for-the-badge)](https://firecrawl.dev)
  
+ ---
  
+## 📸 Screenshots
+ 
+<div align="center">
+| Customer Agent | Research System |
+|---|---|
+| ![App 1](assets/app1.png) | ![App 2](assets/app2.png) |
+ 
+| Research Output | Agent Architecture |
+|---|---|
+| ![App 3](assets/app3.png) | ![Diagram](assets/dia-1.png) |
+ 
+</div>
+---
 ---
  
 ⭐ **Star this repo if you're tired of wrapper tutorials.** ⭐
@@ -125,46 +139,256 @@ LANGSMITH_API_KEY=your_key_here
 LANGSMITH_PROJECT=
 
 --for client side--
-```dotenv
+
 NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (chnage as per your domain)
 ```
 
-
-
-<!-- ------------------------------- -->
-for mas ---> Principal = Supervisor
-The principal never does any actual research. He just reads the query that comes in, makes a plan, and assigns work. He has 3 tools on his desk — a phone to call Researcher A, a phone to call Researcher B, and a "create document" stamp. That's it. He doesn't search anything himself.
-
-Two Vice Principals = Researcher A and Researcher B
-These are the ReAct agents — meaning they actually think in a loop until they're satisfied.
-Researcher A gets the call: "go find academic and web stuff about X." He then independently decides — I'll search Tavily, okay I found something interesting, let me extract that URL, now let me check Google Scholar... he keeps going until he feels the answer is complete. Then he writes up a summary and sends it back up to the Principal.
-Researcher B does the same but his specialty is patents, news, and fact-checking.
-Both work at the same time (parallel fan-out via Send()).
-
-Teacher = citation_agent
-Not a looping agent at all. Just one single task — takes the final report, finds all the URLs buried in it, inserts [1] [2] [3] inline citations, adds a References section at the bottom. Done. Hands it back. No back-and-forth.
-
-Student = You (the user) — HITL
-After the teacher formats the report, the graph freezes and shows you a preview. You either say "approve" or "reject". If you approve, the .docx gets written to disk. If you reject, the whole thing gets cancelled and the Principal asks what you want to change.
-This freeze is the interrupt() call. The graph literally pauses its checkpoint and waits for your input before it can move forward.
-
-The flow in one line:
-
-You ask → Principal plans → calls both VPs in parallel → both VPs research independently using their tools → both report back to Principal → Principal synthesizes → Teacher adds citations → You approve → .docx is written → Principal gives final reply → done.
-
-
-
-cd support_agent
-poetry run python server.py
-
-# Add your OpenAI key
-echo "OPENAI_API_KEY=sk-..." > .env
-
-# Run the server
-python server.py
-# or: uvicorn server:app --reload --port 8000
+# 🛍️ Part 2 — Customer Agent System
+ 
+## Supervisor → REACT Sub-Agents → HITL. Streamed via Raw SSE.
+ 
+> A production-pattern customer support agent backed by a fake DB — real graph, real interrupt logic, sandboxed data.
+ 
+### Graph Architecture
+ 
 ```
+              START
+                │
+       ┌────────▼────────┐
+       │   supervisor    │  ← gpt-4.1-nano, streaming=True
+       │  binds 3 tools  │    (routing descriptors only, never executed)
+       └────────┬────────┘
+                │ assign_tool() — conditional edge via Send()
+     ┌──────────┼──────────┐
+     │          │          │
+┌────▼─────┐ ┌──▼──────┐ ┌─▼────────────────┐
+│order_    │ │refund_  │ │update_order      │
+│agent     │ │agent    │ │── HITL ⏸️        │
+│          │ │         │ │interrupt() pauses│
+│ReAct loop│ │ReAct    │ │graph until human │
+│          │ │loop     │ │input is received │
+│get_order │ │check_   │ │then writes DB    │
+│list_cust │ │eligibi- │ │on "approve"      │
+│_orders   │ │lity     │ │                  │
+│          │ │process_ │ │                  │
+│          │ │refund   │ │                  │
+└────┬─────┘ └──┬──────┘ └─────────┬────────┘
+     └──────────┴──────────────────┘
+                │  ToolMessage → back to supervisor
+       ┌────────▼────────┐
+       │   supervisor    │  synthesizes + responds to customer
+       └─────────────────┘
+```
+ 
+### Nodes & Tools (from the actual code)
+ 
+**`supervisor`** — main LLM. Binds 3 routing descriptor tools. LLM signals intent by calling them; `assign_tool` intercepts and fans out via `Send()`. No tool ever executes in supervisor — pure routing signal.
+ 
+**`order_agent`** — ReAct subagent (`create_react_agent`)
+```python
+tools: [get_order, list_customer_orders]
+# get_order(order_id)        → returns order + merged customer info from fake DB
+# list_customer_orders(name) → fuzzy name match, returns all matching orders
+```
+ 
+**`refund_agent`** — ReAct subagent (`create_react_agent`)
+```python
+tools: [check_refund_eligibility, process_refund]
+# check_refund_eligibility(order_id) → checks status: delivered/shipped = eligible
+# process_refund(order_id, reason)   → mutates ORDERS dict, writes to REFUNDS dict
+#                                      returns refund_id on success
+```
+ 
+**`update_order`** — HITL node (not a ReAct agent)
+```python
+# 1. Validates order_id exists in ORDERS dict
+# 2. interrupt({order_id, product, current_status, new_status, reason, amount})
+#    → graph FREEZES. Frontend receives payload, shows approval card.
+# 3. On resume:
+#    approval == "approve" → ORDERS[order_id]["status"] = new_status
+#    anything else         → cancelled, no DB write
+# 4. Returns ToolMessage → supervisor informs customer
+```
+ 
+### Custom Stream Events
+Each node emits a custom event via `get_stream_writer()` before doing work — frontend gets per-agent status cards over SSE in real time:
+```python
+writer({"agent_status": {"agent": "order_agent", "status": f"Looking up: {query}"}})
+```
+ 
+### Edge Map
+```
+START → supervisor
+supervisor →[assign_tool]→ order_agent | refund_agent | update_order | END
+order_agent   → supervisor
+refund_agent  → supervisor
+update_order  → supervisor
+```
+`InMemorySaver` checkpointer preserves full state across the HITL pause/resume.
+ 
+---
 
-## TOOLS Html
+# 🔬 Part 3 — Multi-Research System
+ 
+## Lead Agent → 2 ReAct Researchers → Citation Agent → HITL Docx. All Streaming.
+ 
+> 4-agent research MAS. Real tool calls. Real sources. Cited report. Downloadable `.docx`. Max `MAX_ITERATIONS=3` research loops before forced synthesis.
 
-visit -> tools_reference_card.html
+# 🔑 Environment Variables
+
+```bash
+# LangSmith — Observability
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_key
+LANGSMITH_PROJECT=learning
+ 
+# LLMs
+OPENAI_API_KEY=your_key
+ANTHROPIC_API_KEY=your_key
+ 
+# Search & Scraping
+TAVILY_API_KEY=your_key
+SERPAPI_API_KEY=your_key
+FIRECRAWL_API_KEY=your_key
+ 
+# Memory
+MEM0_API_KEY=your_key
+```
+ 
+### Graph Architecture
+ 
+```
+              START
+                │
+       ┌────────▼──────────────────┐
+       │       supervisor          │  ← gpt-4.1-mini (planning + synthesis)
+       │  (Lead Researcher)        │    binds: ask_researcher_a
+       │                           │           ask_researcher_b
+       │  1. Plans research        │           create_document
+       │  2. Delegates in parallel │
+       │  3. Synthesizes findings  │
+       │  4. Loops (max 3x)        │
+       │  5. Calls create_document │
+       └────────┬──────────────────┘
+                │ assign_tool() — Send-based parallel fan-out
+        ┌───────┴───────┐
+        │               │
+┌───────▼──────┐  ┌──────▼──────────┐
+│ researcher_a │  │ researcher_b    │
+│              │  │                 │
+│ ReAct loop   │  │ ReAct loop      │
+│ gpt-4.1-nano │  │ gpt-4.1-nano    │
+│              │  │                 │
+│ tavily_web_  │  │ tavily_web_     │
+│ search       │  │ search          │
+│ tavily_      │  │ serp_patent_    │
+│ extract(url) │  │ search          │
+│ serp_scholar_│  │ serp_news_      │
+│ search       │  │ search          │
+└───────┬──────┘  └──────┬──────────┘
+        └───────┬─────────┘
+                │  findings[] + ToolMessage → supervisor
+       ┌────────▼──────────────────┐
+       │       supervisor          │  decides: loop again OR call create_document
+       └────────┬──────────────────┘
+                │ assign_tool → Send("hitl_document", enriched_tool_call)
+       ┌────────▼──────────────────┐
+       │     hitl_document         │
+       │                           │
+       │  1. citation_agent runs   │  ← single LLM call, not ReAct
+       │     (inserts [1][2]       │    regex extracts URLs from findings
+       │      inline citations +   │    asks _subagent_llm to annotate
+       │      ## References)       │
+       │                           │
+       │  2. interrupt(payload) ⏸️ │  ← graph FREEZES
+       │     {summary, filename,   │    frontend shows approval card
+       │      report_preview,      │    with word_count + citation badge
+       │      word_count}          │
+       │                           │
+       │  3. On "approve":         │
+       │     _write_docx() runs    │  ← writes Node.js script to /tmp
+       │     → node script.js      │    uses docx npm library
+       │     → {filename}.docx     │    structured headings, bullets, styles
+       │     saved to /tmp/        │
+       └────────┬──────────────────┘
+                │ ToolMessage → supervisor → final response
+       ┌────────▼──────────────────┐
+       │       supervisor          │  END
+       └───────────────────────────┘
+```
+ 
+### State (`ResearchState`)
+```python
+class ResearchState(MessagesState):
+    research_plan: str                          # supervisor's breakdown
+    findings: Annotated[list, operator.add]     # [{agent, aspect, query, summary}] — reducer appends
+    active_statuses: Annotated[dict, operator.ior]  # per-agent live status — reducer merges
+    hitl_data: dict                             # last interrupt payload (persistent for UI)
+    final_report: str                           # cited markdown after synthesis
+    iterations: Annotated[int, operator.add]    # loop counter, capped at MAX_ITERATIONS=3
+    user_id: str
+```
+ 
+### Tools (real implementations)
+ 
+**Researcher A tools:**
+```python
+tavily_web_search(query, max_results=5)  # search_depth="advanced", returns title+url+snippet
+tavily_extract(url)                      # full raw_content up to 3000 chars
+serp_scholar_search(query)               # google_scholar engine, 5 results, includes year
+```
+ 
+**Researcher B tools:**
+```python
+tavily_web_search(query, max_results=5)  # cross-verification searches
+serp_patent_search(query)                # google_patents engine — short 3-6 word queries only
+serp_news_search(query)                  # google tbm=nws, 5 results with source + date
+```
+ 
+### Custom Stream Events (per node)
+```python
+# researcher_a / researcher_b emit before and after their ReAct loop:
+writer({"active_statuses": {
+    "researcher_a": {"agent": "researcher_a", "status": f"Phase: Researching {aspect}",
+                     "query": query, "start_time": time.time()}
+}})
+# is_done: True emitted on completion — UI clears the loading state
+```
+`hitl_document` also emits `citation_agent` status events and `doc_render` events — frontend tracks all 4 agents independently.
+ 
+### Docx Generation
+After HITL approval, `_write_docx()` writes a Node.js script to `/tmp`, executes it via `subprocess`, and uses the `docx` npm library to produce a structured `.docx` with proper heading styles, bullet numbering, font config (Arial 12pt), and page margins — not a plain text file.
+ 
+### Edge Map
+```
+START → supervisor
+supervisor →[assign_tool]→ researcher_a | researcher_b | hitl_document | END
+researcher_a  → supervisor   (loop until MAX_ITERATIONS or create_document)
+researcher_b  → supervisor
+hitl_document → supervisor
+```
+`InMemorySaver` checkpointer. Mem0 integration scaffolded — ready to activate once OAuth `user_id` is available.
+ 
+---
+
+## ⚡ Streaming Architecture — How It Actually Works
+ 
+```
+Browser                Next.js              FastAPI              LangGraph
+   │                      │                    │                     │
+   │── fetch('/api/run')──►│                    │                     │
+   │                      │──── POST /stream ──►│                     │
+   │                      │                    │──── graph.astream ──►│
+   │                      │                    │                     │
+   │                      │                    │◄── node: "lead" ────│
+   │◄── data: {node} ─────│◄── SSE event ──────│                     │
+   │                      │                    │◄── tool_call ───────│
+   │◄── data: {tool} ─────│◄── SSE event ──────│                     │
+   │                      │                    │◄── token, token ────│
+   │◄── data: {token} ────│◄── SSE event ──────│                     │
+   │                      │                    │◄── END ─────────────│
+   │◄── data: [DONE] ─────│◄── SSE event ──────│                     │
+```
+ 
+**Zero SDK wrapping the stream. Zero abstraction hiding the events.**
+Raw `text/event-stream`. Raw `ReadableStream`. Raw power.
