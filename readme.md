@@ -42,13 +42,10 @@
 ## 📸 Screenshots
  
 <div align="center">
-| Customer Agent | Research System |
-|---|---|
-| ![App 1](assets/app1.png) | ![App 2](assets/app2.png) |
- 
-| Research Output | Agent Architecture |
-|---|---|
-| ![App 3](assets/app3.png) | ![Diagram](assets/dia-1.png) |
+
+ ![App 1](assets/app1.png) 
+ ![App 2](assets/app2.png) 
+ ![App 3](assets/app3.png) 
  
 </div>
 ---
@@ -140,7 +137,7 @@ LANGSMITH_PROJECT=
 
 --for client side--
 
-NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (chnage as per your domain)
+NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (change as per your domain)
 ```
 
 # 🛍️ Part 2 — Customer Agent System
@@ -148,6 +145,23 @@ NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (chnage as per your domain)
 ## Supervisor → REACT Sub-Agents → HITL. Streamed via Raw SSE.
  
 > A production-pattern customer support agent backed by a fake DB — real graph, real interrupt logic, sandboxed data.
+
+# 🔑 Environment Variables
+
+```bash
+-- server side
+# LangSmith — Observability
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_key
+LANGSMITH_PROJECT=learning
+ 
+# LLMs
+OPENAI_API_KEY=your_key
+
+
+-- client side
+NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (change as per your domain)
+```
  
 ### Graph Architecture
  
@@ -237,6 +251,7 @@ update_order  → supervisor
 # 🔑 Environment Variables
 
 ```bash
+-- server side
 # LangSmith — Observability
 LANGSMITH_TRACING=true
 LANGSMITH_API_KEY=your_key
@@ -253,6 +268,9 @@ FIRECRAWL_API_KEY=your_key
  
 # Memory
 MEM0_API_KEY=your_key
+
+-- client side
+NEXT_PUBLIC_AGENT_URL=http://127.0.0.1:8000  (change as per your domain)
 ```
  
 ### Graph Architecture
@@ -392,3 +410,79 @@ Browser                Next.js              FastAPI              LangGraph
  
 **Zero SDK wrapping the stream. Zero abstraction hiding the events.**
 Raw `text/event-stream`. Raw `ReadableStream`. Raw power.
+
+## 💡 Key Concepts — For the Curious
+ 
+<details>
+<summary><b>🧠 What is a LangGraph StateGraph?</b></summary>
+LangGraph models agents as directed graphs. Each **node** is a function that processes state. Each **edge** defines which node runs next — and edges can be **conditional**, meaning the agent decides its own path.
+ 
+```python
+graph = StateGraph(AgentState)
+graph.add_node("reason", reasoning_node)
+graph.add_node("act", tool_node)
+graph.add_conditional_edges("reason", should_continue, {
+    "continue": "act",
+    "end": END
+})
+```
+ 
+</details>
+<details>
+<summary><b>⏸️ What is Human-in-the-Loop (HITL)?</b></summary>
+LangGraph can **interrupt** graph execution at any node, wait for human input, then **resume** from exactly where it stopped. State is fully preserved. This is how you build agents that ask for approval before taking irreversible actions.
+ 
+```python
+graph.add_node("refund_approval", interrupt(refund_node))
+# Graph pauses here → Human approves → Graph resumes
+```
+ 
+</details>
+<details>
+<summary><b>🔄 What is a REACT Agent?</b></summary>
+**Re**ason + **Act** — a loop where the agent:
+1. Reasons about what tool to call
+2. Calls the tool
+3. Observes the result
+4. Reasons about next steps
+5. Repeats until done
+Not one shot. Not a chain. A **loop** with real decision-making.
+ 
+</details>
+<details>
+<summary><b>🌊 Why raw SSE instead of the SDK?</b></summary>
+The LangChain/LangGraph streaming SDKs are powerful — but they hide what's happening. Writing raw SSE means:
+- You control every event that reaches the client
+- You understand exactly what data flows and when
+- You can customize the stream format for your UI
+- No magic. No black boxes. **Full understanding.**
+</details>
+---
+
+---
+ 
+## 🔮 What's Coming Next
+ 
+> The roadmap. The next chapter. The features that will make this legendary.
+ 
+### 🔌 Circuit Breaker Pattern
+```
+Agent fails → Circuit opens → Fallback activates → Circuit probes → Circuit closes
+```
+Production-grade fault tolerance for agent tool calls.
+No more cascading failures when Tavily rate-limits at 2AM.
+ 
+### 🔐 Mem0 with Real OAuth User IDs
+Right now: session-based memory.
+Coming: tie memory to real authenticated users via OAuth.
+Your agent knows YOU — not just your session.
+ 
+### 📚 RAG Pipeline — Upload Your Own PDFs
+```
+User uploads PDF → Chunked + Embedded → Stored in vector DB
+                                              │
+Research query ──────────────────────────────► Agent retrieves from YOUR docs
+```
+The research system will search your private documents alongside the public web.
+ 
+---
